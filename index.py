@@ -1,25 +1,30 @@
 import paho.mqtt.client as mqtt
+import pandas as pd
+import time
 
-# Configurações MQTT
+
 BROKER = "20.206.203.145"
 PORT = 1883
 TOPIC_TEMPERATURA = "/TEF/device001/attrs/temperatura"
 TOPIC_LUMINOSIDADE = "/TEF/device001/attrs/luminosidade"
 TOPIC_FEEDBACK = "/TEF/device001/feedback"
 
-# Limites ideais
-TEMPERATURA_IDEAL = (20, 28)  # Temperatura em °C
-LUMINOSIDADE_IDEAL = (500, 2000)  # Luminosidade em lux
 
-# Variáveis globais para armazenar os dados
+TEMPERATURA_IDEAL = (20, 28) 
+LUMINOSIDADE_IDEAL = (500, 2000)  
+
+
 temperatura_atual = None
 luminosidade_atual = None
 
-# Função para converter leitura analógica (0-1023) em lux (ajuste conforme o sensor)
-def converter_para_lux(valor_analogico):
-    return (valor_analogico / 1023.0) * 2000  # Exemplo: 0-1023 mapeado para 0-2000 lux
 
-# Função de análise
+ARQUIVO_CSV = 'dados_historicos.csv'
+
+
+def converter_para_lux(valor_analogico):
+    return (valor_analogico / 1023.0) * 2000  
+
+
 def analisar_dados(temperatura, luminosidade):
     feedback = []
     if temperatura is not None and not (TEMPERATURA_IDEAL[0] <= temperatura <= TEMPERATURA_IDEAL[1]):
@@ -30,21 +35,46 @@ def analisar_dados(temperatura, luminosidade):
         feedback.append("Condições ideais!")
     return " | ".join(feedback)
 
-# Callback para lidar com mensagens recebidas
+
+def salvar_dados_csv(temperatura, luminosidade, feedback):
+
+    try:
+        dados = pd.read_csv(ARQUIVO_CSV)
+    except FileNotFoundError:
+        dados = pd.DataFrame(columns=["Data", "Temperatura (°C)", "Luminosidade (lux)", "Feedback"])
+
+
+    nova_linha = pd.DataFrame({
+        "Data": [time.strftime('%Y-%m-%d %H:%M:%S')],
+        "Temperatura (°C)": [temperatura],
+        "Luminosidade (lux)": [luminosidade],
+        "Feedback": [feedback]
+    })
+
+    
+    dados = pd.concat([dados, nova_linha], ignore_index=True)
+
+ 
+    dados.to_csv(ARQUIVO_CSV, index=False)
+
+   
+    print("Dados salvos no arquivo CSV:")
+    print(dados.tail())
+
+
 def on_message(client, userdata, msg):
     global temperatura_atual, luminosidade_atual
     if msg.topic == TOPIC_TEMPERATURA:
-        temperatura_atual = float(msg.payload.decode())  # Convertendo para float
+        temperatura_atual = float(msg.payload.decode())  
     elif msg.topic == TOPIC_LUMINOSIDADE:
         valor_analogico = int(msg.payload.decode())
-        luminosidade_atual = converter_para_lux(valor_analogico)  # Convertendo para lux
-    
-    # Se ambos os dados estiverem disponíveis, analisar e enviar feedback
+        luminosidade_atual = converter_para_lux(valor_analogico)  
+
     if temperatura_atual is not None and luminosidade_atual is not None:
         feedback = analisar_dados(temperatura_atual, luminosidade_atual)
+        salvar_dados_csv(temperatura_atual, luminosidade_atual, feedback)
         client.publish(TOPIC_FEEDBACK, feedback)
 
-# Configuração MQTT
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(BROKER, PORT, 60)
