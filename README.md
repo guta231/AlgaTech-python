@@ -16,7 +16,7 @@ Este código utiliza o protocolo MQTT para monitorar os dados de **temperatura**
   
 ## Relatório com Principais Insights Gerados
 
-### Insights Obtidos:
+###Insights Obtidos:
 
 1. **Monitoramento Automático**:
    - Dados de temperatura e luminosidade são monitorados continuamente por sensores e enviados via MQTT.
@@ -48,4 +48,13 @@ Este código utiliza o protocolo MQTT para monitorar os dados de **temperatura**
 1. **Execute o script Python**:
    ```bash
    python index.py
+
+### Integrantes:
+
+| Nome                | RM      |
+|---------------------|---------|
+| Gustavo Henrique    | 556712  |
+| Milena Garcia       | 555111  |
+| Enzo Dias           | 558225  |
+
 
